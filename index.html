@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartLabel Pro - Studio de Etiquetas SAP</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">🏷️</div>
+      <div>
+        <div class="brand-title">
+          SmartLabel Pro
+          <span class="brand-badge">SAP Industrial</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1px;">
+          Centro DA01 • Depósito E101 (EA1 Americana)
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="catalogo">
+        📦 Lote SAP
+      </button>
+      <button class="tab-btn" data-tab="criador">
+        ✍️ Criar Avulsa
+      </button>
+      <button class="tab-btn" data-tab="impressao">
+        🖨️ Central de Impressão <span class="brand-badge" id="badge-fila-impressao">0</span>
+      </button>
+      <button class="tab-btn" data-tab="rede">
+        📡 Impressora Zebra (IP)
+      </button>
+      <button class="tab-btn" data-tab="upload">
+        📤 Importar CSV
+      </button>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="btn-primary" onclick="imprimirTermica()">
+        🖨️ Imprimir Térmica
+      </button>
+      <button class="btn-secondary" onclick="baixarArquivoZPL()" title="Baixar arquivo de comandos ZPL">
+        📥 Baixar ZPL
+      </button>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- Metrics Cards -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon icon-blue">📦</div>
+        <div class="metric-info">
+          <h4>Total de Materiais</h4>
+          <p id="metric-total-itens">0</p>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon icon-green">✅</div>
+        <div class="metric-info">
+          <h4>Selecionados p/ Imprimir</h4>
+          <p id="metric-selecionados">0</p>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon icon-purple">📏</div>
+        <div class="metric-info">
+          <h4>Unidades de Medida</h4>
+          <p id="metric-ums">0</p>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon icon-amber">🏢</div>
+        <div class="metric-info">
+          <h4>Planta Ativa</h4>
+          <p style="font-size: 1.15rem; font-weight: 800; color: #1e3a8a;">DA01 / E101</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 1: CATÁLOGO SAP E LIVE PREVIEW                     -->
+    <!-- ======================================================== -->
+    <div id="view-catalogo" class="view-section">
+      <!-- Toolbar: Busca e Filtros -->
+      <div class="toolbar">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input" placeholder="Buscar por código de material, descrição, grupo de mercadorias...">
+        </div>
+        <div class="filter-pills">
+          <button class="pill-btn active" data-um="TODOS">Todos</button>
+          <button class="pill-btn" data-um="PC">Peças (PC)</button>
+          <button class="pill-btn" data-um="KG">Quilos (KG)</button>
+          <button class="pill-btn" data-um="PAR">Pares (PAR)</button>
+          <button class="pill-btn" data-um="JG">Jogos (JG)</button>
+          <button class="pill-btn" data-um="M">Metros (M)</button>
+          <button class="pill-btn" data-um="UN">Unidades (UN)</button>
+        </div>
+      </div>
+
+      <!-- Split Layout: Tabela de Materiais à esquerda, Live Preview à direita -->
+      <div class="split-layout">
+        
+        <!-- Tabela -->
+        <div class="catalog-card">
+          <div class="catalog-header">
+            <div class="catalog-title">
+              📋 Lista de Materiais SAP
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+              Clique em qualquer linha para visualizar o layout físico
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;">
+                    <input type="checkbox" id="chk-todos" title="Selecionar / Desmarcar Todos" checked>
+                  </th>
+                  <th>Código</th>
+                  <th>Texto Breve / Descrição</th>
+                  <th>UM</th>
+                  <th>Qtd. Disp.</th>
+                  <th>Grupo Merc.</th>
+                  <th>Cópias / Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-materiais">
+                <!-- Preenchido via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Painel Lateral de Live Preview da Etiqueta Física (100x50 mm) -->
+        <div class="preview-panel">
+          <div class="preview-header">
+            <div class="preview-title">
+              👁️ Pré-Visualização Física
+            </div>
+            <div class="preview-tag">
+              100 x 50 mm • 203 DPI
+            </div>
+          </div>
+
+          <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Tipo de Código:</label>
+            <select id="sel-tipo-codigo" class="form-control" style="width: auto; padding: 4px 10px; font-size: 0.82rem;">
+              <option value="code128">Código 128 (Barras 1D)</option>
+              <option value="qrcode">QR Code (2D)</option>
+            </select>
+          </div>
+
+          <!-- Canvas / Mockup Físico -->
+          <div class="label-canvas-container">
+            <div class="label-mockup" id="label-mockup">
+              <div class="mockup-header" id="mockup-header">
+                CENTRO: DA01 | DEP: E101 - EA1 Americana
+              </div>
+              <div class="mockup-body">
+                <div class="mockup-code" id="mockup-code">CÓD: 20-000-000-127</div>
+                <div class="mockup-desc" id="mockup-desc">DESC: AVA-TD AER 13,8KVFF/5 220V/2 30KVA 3FCMG</div>
+                <div class="mockup-barcode">
+                  <div id="mockup-barcode-render"></div>
+                  <div class="mockup-barcode-text" id="mockup-barcode-text">20-000-000-127</div>
+                </div>
+              </div>
+              <div class="mockup-footer">
+                <div>
+                  <div class="mockup-qtd" id="mockup-qtd">QTD: 1 PC</div>
+                  <div style="font-size: 8px; color: #444;" id="mockup-valor">VALOR: R$ 1.593,74</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 8px; font-weight: bold;" id="mockup-grp">GRP: 701000000</div>
+                  <div style="font-size: 8px; color: #555;" id="mockup-data">DATA: 24/10/2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-actions">
+            <button class="btn-primary" style="justify-content: center;" onclick="imprimirTermica()">
+              🖨️ Imprimir Térmica
+            </button>
+            <button class="btn-secondary" style="justify-content: center;" onclick="imprimirFolhaA4()">
+              📄 Imprimir em Folha A4
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 2: CRIADOR DE ETIQUETA AVULSA                      -->
+    <!-- ======================================================== -->
+    <div id="view-criador" class="view-section" style="display: none;">
+      <div class="catalog-card" style="max-width: 800px; margin: 0 auto; padding: 24px;">
+        <h2 style="margin-bottom: 8px; font-size: 1.3rem; color: var(--primary);">
+          ✍️ Criador Rápido de Etiqueta Avulsa
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+          Precisa etiquetar um item que acabou de chegar, uma peça de garantia ou repor uma etiqueta rasgada? Preencha os campos abaixo e imprima na hora!
+        </p>
+
+        <form id="form-avulso" onsubmit="event.preventDefault(); criarEtiquetaAvulsa();">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Código do Material (SAP / SKU):</label>
+              <input type="text" id="avulso-material" class="form-control" placeholder="Ex: 20-000-099-999" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Quantidade:</label>
+              <input type="text" id="avulso-qtd" class="form-control" placeholder="Ex: 10" value="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unidade de Medida (UM):</label>
+              <input type="text" id="avulso-um" class="form-control" placeholder="PC, KG, M, UN..." value="PC" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Grupo de Mercadorias:</label>
+              <input type="text" id="avulso-grp" class="form-control" placeholder="Ex: 701000000" value="701000000">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Descrição do Material (Texto Breve):</label>
+            <input type="text" id="avulso-desc" class="form-control" placeholder="Ex: CONECTOR METÁLICO 10MM COM ISOLAÇÃO" required>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Depósito:</label>
+              <input type="text" id="avulso-deposito" class="form-control" value="E101">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nome do Depósito:</label>
+              <input type="text" id="avulso-desc-dep" class="form-control" value="EA1 Americana">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor Unitário / Total (R$):</label>
+              <input type="text" id="avulso-valor" class="form-control" value="0,00">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn-primary" style="padding: 12px 24px;">
+              💾 Adicionar ao Catálogo e Pré-Visualizar
+            </button>
+            <button type="button" class="btn-secondary" onclick="trocarAba('catalogo')">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 3: CENTRAL DE IMPRESSÃO                            -->
+    <!-- ======================================================== -->
+    <div id="view-impressao" class="view-section" style="display: none;">
+      <div class="catalog-card" style="max-width: 900px; margin: 0 auto; padding: 28px;">
+        <h2 style="margin-bottom: 8px; font-size: 1.3rem; color: var(--primary);">
+          🖨️ Central de Impressão Multiformato
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+          Escolha o tipo de equipamento onde as etiquetas serão impressas:
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+          <!-- Card Térmica -->
+          <div style="border: 2px solid var(--primary); border-radius: 12px; padding: 20px; background: #eff6ff; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 2rem; margin-bottom: 12px;">🏷️</div>
+              <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 8px;">Bobina Térmica (100x50 mm)</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                Impressoras industriais e de mesa (Zebra, Elgin, Argox). 1 etiqueta por página, corte contínuo.
+              </p>
+            </div>
+            <button class="btn-primary" style="justify-content: center;" onclick="imprimirTermica()">
+              Imprimir Térmica Agora
+            </button>
+          </div>
+
+          <!-- Card Folha A4 -->
+          <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 2rem; margin-bottom: 12px;">📄</div>
+              <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;">Folha Adesiva A4 (10 por Folha)</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                Impressoras de escritório laser ou jato de tinta. Diagramação padrão em grade 2x5.
+              </p>
+            </div>
+            <button class="btn-secondary" style="justify-content: center;" onclick="imprimirFolhaA4()">
+              Imprimir em Folha A4
+            </button>
+          </div>
+
+          <!-- Card ZPL Puro -->
+          <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 2rem; margin-bottom: 12px;">💾</div>
+              <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;">Arquivo ZPL (.zpl)</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                Código de comandos original Zebra. Pronto para BarTender, ZebraDesigner ou envio via RAW spooler.
+              </p>
+            </div>
+            <button class="btn-secondary" style="justify-content: center;" onclick="baixarArquivoZPL()">
+              Baixar Arquivo ZPL
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 4: CONEXÃO DIRETA ZEBRA (REDE TCP)                  -->
+    <!-- ======================================================== -->
+    <div id="view-rede" class="view-section" style="display: none;">
+      <div class="network-card">
+        <h2 style="margin-bottom: 8px; font-size: 1.3rem; color: var(--primary);">
+          📡 Disparo Direto para Impressora Zebra na Rede
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+          Envie comandos ZPL diretamente para uma impressora térmica conectada na rede local da empresa através da porta RAW 9100.
+        </p>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Endereço IP da Impressora Zebra na Fábrica / Depósito:</label>
+          <input type="text" id="input-ip-zebra" class="form-control" placeholder="Ex: 192.168.1.100 ou 10.0.0.45" value="192.168.1.100">
+        </div>
+
+        <button class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="enviarZebraRede()">
+          🚀 Enviar Etiquetas Selecionadas para a Zebra (Porta 9100)
+        </button>
+
+        <div id="status-envio-zebra" style="margin-top: 16px; font-size: 0.9rem;"></div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 5: IMPORTAR NOVA BASE CSV                          -->
+    <!-- ======================================================== -->
+    <div id="view-upload" class="view-section" style="display: none;">
+      <div class="catalog-card" style="max-width: 700px; margin: 0 auto; padding: 32px; text-align: center;">
+        <h2 style="margin-bottom: 8px; font-size: 1.3rem; color: var(--primary);">
+          📤 Importar Nova Extração do SAP
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+          Arraste e solte o arquivo CSV ou clique no botão abaixo para carregar um novo lote de estoque (transações SE16N, MB52, SQVI).
+        </p>
+
+        <div id="drop-csv-area" style="border: 2px dashed var(--border); border-radius: 12px; padding: 48px 24px; background: var(--surface-alt); cursor: pointer; transition: all 0.2s;">
+          <div style="font-size: 3rem; margin-bottom: 12px;">📄</div>
+          <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-main);">
+            Clique aqui ou solte o arquivo CSV do SAP
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
+            Aceita arquivos delimitados por ponto e vírgula (;) ou vírgula (,)
+          </div>
+        </div>
+        <input type="file" id="file-csv-input" accept=".csv,.txt" style="display: none;">
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Dados Padrão Pré-Carregados (440 Itens) -->
+  <script src="dados_padrao.js"></script>
+  <!-- Lógica Principal -->
+  <script src="app.js"></script>
+
+</body>
+</html>
+
